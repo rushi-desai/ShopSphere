@@ -1,13 +1,220 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// ShopSphere Prisma Schema
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// ======================
+// ENUMS
+// ======================
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+// ======================
+// MODELS
+// ======================
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  phone         String?
+  role          Role     @default(CUSTOMER)
+  isActive      Boolean  @default(true)
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  addresses Address[]
+  cart      Cart?
+  orders    Order[]
+  reviews   Review[]
+
+  @@index([role])
+}
+
+model Address {
+  id         String   @id @default(uuid())
+  userId     String
+  label      String?
+  fullName   String
+  phone      String?
+  line1      String
+  line2      String?
+  city       String
+  state      String
+  postalCode String
+  country    String   @default("IN")
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([userId])
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+
+  @@index([slug])
+}
+
+model Product {
+  id               String    @id @default(uuid())
+  name             String
+  slug             String    @unique
+  description      String?
+  price            Decimal   @db.Decimal(10, 2)
+  compareAtPrice   Decimal?  @db.Decimal(10, 2)
+  sku              String?   @unique
+  stock            Int       @default(0)
+  lowStockThreshold Int      @default(5)
+  isActive         Boolean   @default(true)
+  isFeatured       Boolean   @default(false)
+  images           String[]
+  categoryId       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  category  Category?  @relation(fields: [categoryId], references: [id])
+  cartItems CartItem[]
+  orderItems OrderItem[]
+  reviews   Review[]
+
+  @@index([categoryId])
+  @@index([isActive, isFeatured])
+  @@index([deletedAt])
+}
+
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+}
+
+model Order {
+  id                  String        @id @default(uuid())
+  orderNumber         String        @unique
+  userId              String
+  status              OrderStatus   @default(PENDING)
+  paymentStatus       PaymentStatus @default(PENDING)
+
+  subtotal            Decimal @db.Decimal(10, 2)
+  shippingFee         Decimal @db.Decimal(10, 2) @default(0)
+  tax                 Decimal @db.Decimal(10, 2) @default(0)
+  discount             Decimal @db.Decimal(10, 2) @default(0)
+  total               Decimal @db.Decimal(10, 2)
+
+  shippingAddressId   String?
+  shippingFullName   String
+  shippingPhone      String?
+  shippingLine1      String
+  shippingLine2      String?
+  shippingCity       String
+  shippingState      String
+  shippingPostalCode String
+  shippingCountry    String
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+  shippingAddress Address? @relation(fields: [shippingAddressId], references: [id])
+  items           OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String  @id @default(uuid())
+  orderId     String
+  productId   String
+  productName String
+  productSku  String?
+  unitPrice   Decimal @db.Decimal(10, 2)
+  quantity    Int
+  totalPrice  Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  rating    Int
+  title     String?
+  comment   String?
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
 }
