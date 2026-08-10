@@ -4,6 +4,7 @@ import helmet from "helmet";
 import productRoutes from "./routes/product.routes";
 import authRoutes from "./routes/auth.routes";
 import cartRoutes from "./routes/cart.routes";
+import orderRoutes from "./routes/order.routes";
 const app = express();
 
 app.use(helmet());
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/orders", orderRoutes);
 
 app.get("/test", (_req, res) => {
   res.json({ message: "THIS APP IS RUNNING" });
