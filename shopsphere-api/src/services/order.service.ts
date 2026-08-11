@@ -1,7 +1,23 @@
 import { OrderStatus } from "@prisma/client";
 import prisma from "../config/prisma";
 
-export const createOrder = async (userId: string) => {
+export const createOrder = async (
+  userId: string,
+  addressId: string
+) => {
+
+  const address = await prisma.address.findFirst({
+    where: {
+      id: addressId,
+      userId,
+    },
+  });
+
+  if (!address) {
+    throw new Error("Address not found");
+  }
+
+ 
   const cart = await prisma.cart.findUnique({
     where: {
       userId,
@@ -19,6 +35,7 @@ export const createOrder = async (userId: string) => {
     throw new Error("Cart is empty");
   }
 
+  
   for (const item of cart.items) {
     if (!item.product.isActive || item.product.deletedAt) {
       throw new Error(
@@ -33,6 +50,7 @@ export const createOrder = async (userId: string) => {
     }
   }
 
+  // 4. Calculate totals
   const subtotal = cart.items.reduce((total, item) => {
     return total + Number(item.product.price) * item.quantity;
   }, 0);
@@ -44,11 +62,13 @@ export const createOrder = async (userId: string) => {
 
   const orderNumber = `ORD-${Date.now()}`;
 
+  
   const order = await prisma.$transaction(async (tx) => {
     const newOrder = await tx.order.create({
       data: {
         orderNumber,
         userId,
+
         status: "PENDING",
         paymentStatus: "PENDING",
 
@@ -58,12 +78,16 @@ export const createOrder = async (userId: string) => {
         discount,
         total,
 
-        shippingFullName: "",
-        shippingLine1: "",
-        shippingCity: "",
-        shippingState: "",
-        shippingPostalCode: "",
-        shippingCountry: "IN",
+        // Shipping address snapshot
+        shippingAddressId: address.id,
+        shippingFullName: address.fullName,
+        shippingPhone: address.phone,
+        shippingLine1: address.line1,
+        shippingLine2: address.line2,
+        shippingCity: address.city,
+        shippingState: address.state,
+        shippingPostalCode: address.postalCode,
+        shippingCountry: address.country,
 
         items: {
           create: cart.items.map((item) => ({
@@ -77,11 +101,13 @@ export const createOrder = async (userId: string) => {
           })),
         },
       },
+
       include: {
         items: true,
       },
     });
 
+   
     for (const item of cart.items) {
       await tx.product.update({
         where: {
@@ -95,6 +121,7 @@ export const createOrder = async (userId: string) => {
       });
     }
 
+    
     await tx.cartItem.deleteMany({
       where: {
         cartId: cart.id,

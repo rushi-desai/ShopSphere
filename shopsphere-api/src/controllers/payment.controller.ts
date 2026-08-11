@@ -1,29 +1,33 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
-import { createOrder , getMyOrders ,getOrderById  ,updateOrderStatus } from "../services/order.service";
+import {
+  createPayment,
+  getPaymentByOrderId,
+  updatePaymentStatus
+} from "../services/payment.service";
 
-export const createOrderController = async (
+export const createPaymentController = async (
   req: AuthRequest,
   res: Response
 ) => {
   try {
-    const { addressId } = req.body;
+    const { orderId } = req.body;
 
-    if (typeof addressId !== "string") {
+    if (!orderId || typeof orderId !== "string") {
       return res.status(400).json({
         success: false,
-        message: "Address ID is required",
+        message: "Order ID is required",
       });
     }
 
-    const order = await createOrder(
+    const payment = await createPayment(
       req.user!.userId,
-      addressId
+      orderId
     );
 
     return res.status(201).json({
       success: true,
-      data: order,
+      data: payment,
     });
   } catch (error) {
     return res.status(400).json({
@@ -31,34 +35,12 @@ export const createOrderController = async (
       message:
         error instanceof Error
           ? error.message
-          : "Failed to create order",
+          : "Failed to create payment",
     });
   }
 };
 
-
-
-export const getMyOrdersController = async (
-  req: AuthRequest,
-  res: Response
-) => {
-  try {
-    const orders = await getMyOrders(req.user!.userId);
-
-    return res.status(200).json({
-      success: true,
-      data: orders,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Failed to get orders",
-    });
-  }
-};
-
-
-export const getOrderByIdController = async (
+export const getPaymentController = async (
   req: AuthRequest,
   res: Response
 ) => {
@@ -68,18 +50,18 @@ export const getOrderByIdController = async (
     if (typeof id !== "string") {
       return res.status(400).json({
         success: false,
-        message: "Invalid order id",
+        message: "Invalid order ID",
       });
     }
 
-    const order = await getOrderById(
+    const payment = await getPaymentByOrderId(
       req.user!.userId,
       id
     );
 
     return res.status(200).json({
       success: true,
-      data: order,
+      data: payment,
     });
   } catch (error) {
     return res.status(404).json({
@@ -87,40 +69,44 @@ export const getOrderByIdController = async (
       message:
         error instanceof Error
           ? error.message
-          : "Order not found",
+          : "Payment not found",
     });
   }
 };
 
 
-export const updateOrderStatusController = async (
+
+export const updatePaymentController = async (
   req: AuthRequest,
   res: Response
 ) => {
   try {
+    const { id } = req.params;
     const { status } = req.body;
-
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: "Status is required",
-      });
-    }
-
-    const id = req.params.id;
 
     if (typeof id !== "string") {
       return res.status(400).json({
         success: false,
-        message: "Invalid order id",
+        message: "Invalid payment ID",
       });
     }
 
-    const order = await updateOrderStatus(id, status);
+  if (status !== "PAID" && status !== "FAILED") {
+  return res.status(400).json({
+    success: false,
+    message: "Status must be PAID or FAILED",
+  });
+}
+
+   const payment = await updatePaymentStatus(
+  
+  id,
+  status
+);
 
     return res.status(200).json({
       success: true,
-      data: order,
+      data: payment,
     });
   } catch (error) {
     return res.status(400).json({
@@ -128,7 +114,7 @@ export const updateOrderStatusController = async (
       message:
         error instanceof Error
           ? error.message
-          : "Failed to update order status",
+          : "Failed to update payment",
     });
   }
 };
