@@ -13,12 +13,7 @@ export const createPaymentController = async (
   try {
     const { orderId } = req.body;
 
-    if (!orderId || typeof orderId !== "string") {
-      return res.status(400).json({
-        success: false,
-        message: "Order ID is required",
-      });
-    }
+
 
     const payment = await createPayment(
       req.user!.userId,
@@ -91,12 +86,7 @@ export const updatePaymentController = async (
       });
     }
 
-  if (status !== "PAID" && status !== "FAILED") {
-  return res.status(400).json({
-    success: false,
-    message: "Status must be PAID or FAILED",
-  });
-}
+  
 
    const payment = await updatePaymentStatus(
   

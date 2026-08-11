@@ -2,6 +2,8 @@ import { Router } from "express";
 import { authenticate  } from "../middleware/auth.middleware";
 import { updateOrderStatusController } from "../controllers/order.controller";
 import { authorize } from "../middleware/role.middleware";
+import { validate } from "../middleware/validate";
+import { createOrderSchema } from "../utils/validators/order-validator";
 
 import {
   createOrderController,
@@ -14,6 +16,7 @@ const router = Router();
 router.post(
   "/",
   authenticate,
+  validate(createOrderSchema),
   createOrderController
 );
 

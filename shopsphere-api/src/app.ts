@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 
 
+
 import productRoutes from "./routes/product.routes";
 import authRoutes from "./routes/auth.routes";
 import cartRoutes from "./routes/cart.routes";
@@ -12,7 +13,7 @@ import categoryRoutes from "./routes/category.routes";
 import reviewRoutes from "./routes/review.routes";
 import paymentRoutes from "./routes/payment.routes";
 
-
+import { errorHandler } from "./middleware/error.middleware";
 
 
 const app = express();
@@ -44,5 +45,7 @@ app.get("/health", (_req, res) => {
     message: "ShopSphere API is running",
   });
 });
+
+app.use(errorHandler);
 
 export default app;
